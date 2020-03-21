@@ -11,6 +11,10 @@ BOT_NAME = os.getenv("BOT_NAME")
 
 client = discord.Client()
 
+def log_message(msg):
+    time_str = "[" + datetime.now().isoformat() + "] Lynx&EagleBot: "
+    print(time_str + msg)
+
 @client.event
 async def on_message(message):
     if message.channel.name == GAME_LOG_CHANNEL:
