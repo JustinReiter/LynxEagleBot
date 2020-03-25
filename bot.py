@@ -18,18 +18,17 @@ def log_message(msg):
 @client.event
 async def on_message(message):
     if message.channel.name == GAME_LOG_CHANNEL:
-        print("[" + datetime.now().isoformat() + "] Lynx&EagleBot: Received Message")
-        print(message.content + "\n\tBy: " + message.author.display_name)
         if message.author.display_name == BOT_NAME:
             # Message is from bot, check if winner is 101st or lynx
+            log_message(message.content + " | By: " + message.author.display_name)
             if message.content.startswith("[Lynx]") or message.content.startswith("{101st}"):
-                print("Woohoo, we won!")
+                log_message("Woohoo, we won!")
                 await message.channel.send(content=":tada: Woohoo, congrats on the win! :tada:", tts=True)
 
 
 @client.event
 async def on_ready():
-
+    print("Running from bot.py")
     for guild in client.guilds:
         print("[" + datetime.now().isoformat() + "] Lynx&EagleBot: Connected")
         if guild.name == GUILD:
