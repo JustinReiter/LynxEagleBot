@@ -21,7 +21,7 @@ def log_message(msg, division=None, game=None):
     print(time_str + msg)
 
 def format_message(game):
-    return game.winner + " defeats " + game.loser + "\n" + game.division + "\n<https://www.warzone.com/MultiPlayer?GameID=" + game.game_id + ">"
+    return "**" + game.winner + "** defeats **" + game.loser + "**\n" + game.division + "\n<https://www.warzone.com/MultiPlayer?GameID=" + game.game_id + ">"
 
 def get_channel():
     for guild in client.guilds:
