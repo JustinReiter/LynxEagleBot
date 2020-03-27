@@ -52,7 +52,10 @@ def send_game_query(game_id):
 def send_tournament_query(tournament_id):
     url = "https://www.warzone.com/API/GameIDFeed?TournamentID=" + str(tournament_id)
     params = {"Email": API_EMAIL, "APIToken":API_TOKEN}
-    return requests.get(url=url, params=params).json().get("gameIDs", [])
+    res = requests.get(url=url, params=params).json()
+    if "gameIDs" not in res:
+        log_message("Game ids not found for tourney id {}: {}".format(tournament_id, res))
+    return res.get("gameIDs")
 
 def convertFileToList(linesIt):
     newList = []
@@ -86,7 +89,6 @@ def check_games():
         tournament_ids = convertFileToDict(tournament_ids)
 
         log_message("Number of already processed games: {} ".format(len(processed_games)))
-        print(tournament_ids)
         game_ids = {}
 
         for key, val in tournament_ids.items():
