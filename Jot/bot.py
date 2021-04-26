@@ -9,11 +9,11 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 GUILD_ID = os.getenv("DISCORD_GUILD_ID")
 ROLES_CHANNEL = os.getenv("ROLES_CHANNEL")
-BOT_ID = os.getenv("BOT_ID")
+BOT_ID = int(os.getenv("BOT_ID"))
 
 admins = [
-    os.getenv("JOI_ID"),
-    os.getenv("JUSTIN_ID")
+    int(os.getenv("JOI_ID")),
+    int(os.getenv("JUSTIN_ID"))
 ]
 
 intents = discord.Intents(messages=True, guilds=True, reactions=True, members=True)
@@ -29,20 +29,20 @@ CSGO: :gun:
 L4D2: :zombie:
 Politics: :office_worker:
 Rocket League: :red_car:"""
-emojis = [":x:", ":regional_indicator_w:", ":chess_pawn:", ":regional_indicator_c:", ":farmer:", ":gun:", ":zombie:", ":office_worker:", ":red_car:"]
+emojis = ["❌", "🇼", "♟️", "🇨", "🧑‍🌾", "🔫", "🧟", "🧑‍💼", "🚗"]
 
 emote_to_role = {
-    ":x:": "Picking Competition",
-    ":regional_indicator_w:": "Warzone",
-    ":chess_pawn:": "Chess",
-    ":regional_indicator_c:": "Civ 6",
-    ":farmer:": "Catan",
-    ":gun:": "CS:GO",
-    ":zombie:": "L4D2",
-    ":office_worker:": "Politics",
-    ":red_car:": "Rocket League",
-    ":judge:": "Judge",
-    ":student:": "contestant"
+    "❌": "Picking Competition",
+    "🇼": "Warzone",
+    "♟️": "Chess",
+    "🇨": "Civ 6",
+    "🧑‍🌾": "Catan",
+    "🔫": "CS:GO",
+    "🧟": "L4D2",
+    "🧑‍💼": "Politics",
+    "🚗": "Rocket League",
+    "🧑‍⚖️": "Judge",
+    "🧑‍🎓": "Contestant"
 }
 
 quotes = [
@@ -65,6 +65,7 @@ async def send_init_message(message: discord.Message):
     log_message("Sending init message for roles")
     sent_message = await message.channel.send(content=general_role_msg)
     for emoji in emojis:
+        print(emoji)
         await sent_message.add_reaction(emoji)
 
 @client.event
@@ -73,13 +74,13 @@ async def on_message(message: discord.Message):
         # Don't process bot messages
         return
     if message.author.id in admins and message.content == "j!init":
-        send_init_message(message)
+        await send_init_message(message)
     elif message.author.id in admins and message.content.startswith("j!event"):
         # New event message
         log_message("Started new picking competition event on {}".format(message.content[8:]))
-        sent_message = await message.channel.send("New picking competition on {}!\n\nIf you are interested in joining, use :judge: to be a judge and :student: to be a contestant.".format(message.context[8:]))
-        await sent_message.add_reaction(":judge:")
-        await sent_message.add_reaction(":student:")
+        sent_message = await message.channel.send("New picking competition on {}!\n\nIf you are interested in joining, use :judge: to be a judge and :student: to be a contestant.".format(message.content[8:]))
+        await sent_message.add_reaction("🧑‍⚖️")
+        await sent_message.add_reaction("🧑‍🎓")
     elif message.content == "j!quote":
         # Quotes easter egg
         quote = random.choice(quotes)
@@ -92,22 +93,28 @@ async def on_message(message: discord.Message):
     
 
 @client.event
-async def on_reaction_add(reaction: discord.Reaction, user: discord.Member):
+async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
+    channel = await client.fetch_channel(payload.channel_id)
+    user = await channel.guild.fetch_member(payload.user_id)
+
     if user.id == BOT_ID:
         # Don't process bot actions
         return
-    if reaction.message.channel.name == ROLES_CHANNEL and reaction.emoji.name in emote_to_role:
-        await user.add_roles(get(reaction.message.server.roles, name=emote_to_role[reaction.emoji.name]))
-        log_message("Added {} role for {}".format(emote_to_role[reaction.emoji.name], user.name + user.discriminator))
+    if channel.name == ROLES_CHANNEL and payload.emoji.name in emote_to_role:
+        await user.add_roles(get(channel.guild.roles, name=emote_to_role[payload.emoji.name]))
+        log_message("Added {} role for {}".format(emote_to_role[payload.emoji.name], user.name + user.discriminator))
 
 @client.event
-async def on_reaction_remove(reaction: discord.Reaction, user: discord.Member):
+async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
+    channel = await client.fetch_channel(payload.channel_id)
+    user = await channel.guild.fetch_member(payload.user_id)
+
     if user.id == BOT_ID:
         # Don't process bot actions
         return
-    if reaction.message.channel.name == ROLES_CHANNEL and reaction.emoji.name in emote_to_role:
-        await user.remove_roles(get(reaction.message.server.roles, name=emote_to_role[reaction.emoji.name]))
-        log_message("Removed {} role from {}".format(emote_to_role[reaction.emoji.name], user.name + user.discriminator))
+    if channel.name == ROLES_CHANNEL and payload.emoji.name in emote_to_role:
+        await user.remove_roles(get(channel.guild.roles, name=emote_to_role[payload.emoji.name]))
+        log_message("Removed {} role from {}".format(emote_to_role[payload.emoji.name], user.name + user.discriminator))
 
 @client.event
 async def on_ready():
