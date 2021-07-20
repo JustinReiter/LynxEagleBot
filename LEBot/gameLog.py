@@ -1,6 +1,7 @@
 import os
 import discord
 import sys
+import json
 import requests
 from dotenv import load_dotenv
 from datetime import datetime
@@ -8,11 +9,16 @@ import traceback
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
-GUILD = int(os.getenv("DISCORD_GUILD"))
-PR_LOG_CHANNEL = int(os.getenv("PR_LOG_CHANNEL"))
 BOT_NAME = os.getenv("BOT_NAME")
 API_EMAIL = os.getenv("API_EMAIL")
 API_TOKEN = os.getenv("API_TOKEN")
+
+if (len(sys.argv) > 2 and sys.argv[2] == "test"):
+    GUILD = int(os.getenv("DISCORD_GUILD_TEST"))
+    PR_LOG_CHANNEL = int(os.getenv("PR_LOG_CHANNEL_TEST"))    
+else:
+    GUILD = int(os.getenv("DISCORD_GUILD"))
+    PR_LOG_CHANNEL = int(os.getenv("PR_LOG_CHANNEL"))
 
 finished_games = []
 standings_strings = []
@@ -102,13 +108,18 @@ def getStandingsFromFile():
     return standings
 
 def writeStandingsToFile(standings):
-    try:
-        writer = open("./files/standings", "w")
+    with open("./files/standings", "w") as writer:
         for div, players in standings.items():
             for id, player in players.items():
                 writer.write("{}\t{}\t{}\t{}\t{}\n".format(div, id, player['name'], player['wins'], player['losses']))
-    except:
-        pass
+
+def getBootsFromFile():
+    with open("./files/boots", "r") as boots_file:
+        return json.load(boots_file)
+
+def writeBootsObjectToFile(boots):
+    with open("./files/boots", "w") as boots_file:
+        return json.dump(boots, boots_file)
 
 def convertListToFile(processedList):
     file_str = ""
@@ -125,6 +136,7 @@ def check_games():
         processed_games = convertFileToList(processed_games)
         tournament_ids = convertFileToDict(tournament_ids)
         standings = getStandingsFromFile()
+        boots = getBootsFromFile()
 
         log_message("Number of already processed games: {} ".format(len(processed_games)))
         game_ids = {}
@@ -135,6 +147,8 @@ def check_games():
         for div in game_ids:
             if div not in standings:
                 standings[div] = {}
+            if div not in boots:
+                boots[div] = {}
             unprocessed_games = list(set(game_ids[div]) - set(processed_games))
             log_message("Number of games in {} to check: {}".format(div, len(unprocessed_games)))
             for game_id in unprocessed_games:
@@ -160,11 +174,19 @@ def check_games():
                             playerObj = standings[div][player.get("id")]
                             playerObj["losses"] += 1
                             standings[div].update({player.get("id"): playerObj})
+
+                            # Check if loser booted and add to stats if so
+                            if player.get("state") == "Booted":
+                                boots[div].setdefault(player.get("id"), {"name": loser, "boots": 0, "links": []})
+                                boots[div][player.get("id")]["boots"] += 1
+                                boots[div][player.get("id")]["links"].append(game.get("id"))
+                    
                     finished_games.append(GameObject(div, winner, loser, game_id))
                     processed_games.append(game_id)
         
         open("./files/processedGames", "w").write(convertListToFile(processed_games))
         writeStandingsToFile(standings)
+        writeBootsObjectToFile(boots)
         log_message("Number of new finished games: {}".format(len(finished_games)))
         if len(finished_games):
             client.run(TOKEN)
