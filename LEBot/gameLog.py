@@ -13,20 +13,23 @@ BOT_NAME = os.getenv("BOT_NAME")
 API_EMAIL = os.getenv("API_EMAIL")
 API_TOKEN = os.getenv("API_TOKEN")
 
-if (len(sys.argv) > 2 and sys.argv[2] == "test"):
-    GUILD = int(os.getenv("DISCORD_GUILD_TEST"))
-    PR_LOG_CHANNEL = int(os.getenv("PR_LOG_CHANNEL_TEST"))    
-else:
+if (len(sys.argv) > 2 and sys.argv[2] == "live"):
     GUILD = int(os.getenv("DISCORD_GUILD"))
     PR_LOG_CHANNEL = int(os.getenv("PR_LOG_CHANNEL"))
+    DEBUG_MODE = False
+else:
+    GUILD = int(os.getenv("DISCORD_GUILD_TEST"))
+    PR_LOG_CHANNEL = int(os.getenv("PR_LOG_CHANNEL_TEST"))    
+    DEBUG_MODE = True
 
 finished_games = []
 standings_strings = []
+boot_string = ""
 
 client = discord.Client()
 
 def log_message(msg, type="check_games"):
-    time_str = "[" + datetime.now().isoformat() + "] {}: ".format(type)
+    time_str = "[" + datetime.now().isoformat() + "] {}{}: ".format(type, " [TEST]" if DEBUG_MODE else "")
     print(time_str + msg)
     with open("./logs/{}.txt".format(datetime.now().isoformat()[:10]), 'a') as log_writer:
         log_writer.write(time_str + msg + "\n")
@@ -46,6 +49,7 @@ async def on_ready():
     try:
         global finished_games
         global standings_strings
+        global boot_string
         channel = get_channel()
 
         for game in finished_games:
@@ -55,6 +59,10 @@ async def on_ready():
         for standing in standings_strings:
             await channel.send(content=standing)
         standings_strings = []
+
+        if boot_string:
+            await channel.send(content=boot_string)
+        boot_string = ""
 
         if not client.is_closed():
             await client.close()
@@ -76,67 +84,22 @@ def send_tournament_query(tournament_id):
         log_message("Game ids not found for tourney id {}: {}".format(tournament_id, res))
     return res.get("gameIDs")
 
-def convertFileToList(linesIt):
-    newList = []
-    for line in linesIt:
-        newList.append(int(line.strip("\n")))
-    return newList
+def loadFileToJson(filePath):
+    with open(filePath, 'r') as reader:
+        return json.load(reader)
 
-def convertFileToDict(linesIt):
-    newDict = {}
-    key = ""
-    hasSeenKey = False
-    for line in linesIt:
-        if hasSeenKey:
-            newDict[key] = line.strip("\n")
-        else:
-            key = line.strip("\n")
-        hasSeenKey = not hasSeenKey
-    return newDict
-
-def getStandingsFromFile():
-    # {division: {id: {names, wins, losses}}}
-    standings = {}
-    with open("./files/standings", "r") as standingsLines:
-        for line in standingsLines:
-            tokens = line.split("\t")
-            if tokens[0] not in standings:
-                standings[tokens[0]] = {}
-            
-            standings[tokens[0]][tokens[1]] = {"name": tokens[2], "wins": int(tokens[3]), "losses": int(tokens[4])}
-        standingsLines.close()
-    return standings
-
-def writeStandingsToFile(standings):
-    with open("./files/standings", "w") as writer:
-        for div, players in standings.items():
-            for id, player in players.items():
-                writer.write("{}\t{}\t{}\t{}\t{}\n".format(div, id, player['name'], player['wins'], player['losses']))
-
-def getBootsFromFile():
-    with open("./files/boots", "r") as boots_file:
-        return json.load(boots_file)
-
-def writeBootsObjectToFile(boots):
-    with open("./files/boots", "w") as boots_file:
-        return json.dump(boots, boots_file)
-
-def convertListToFile(processedList):
-    file_str = ""
-    for game_id in processedList:
-        file_str += str(game_id) + "\n"
-    return file_str
+def dumpJsonToFile(filePath, data):
+    with open(filePath, "w") as writer:
+        json.dump(data, writer, sort_keys=True, indent=4)
 
 def check_games():
     try:
         global finished_games
         finished_games.clear()
-        processed_games = open("./files/processedGames", "r")
-        tournament_ids = open("./files/tournamentIds", "r")
-        processed_games = convertFileToList(processed_games)
-        tournament_ids = convertFileToDict(tournament_ids)
-        standings = getStandingsFromFile()
-        boots = getBootsFromFile()
+        tournament_ids = loadFileToJson("./files/tournamentIds")
+        processed_games = loadFileToJson("./files/processedGames")
+        standings = loadFileToJson("./files/standings")
+        boots = loadFileToJson("./files/boots")
 
         log_message("Number of already processed games: {} ".format(len(processed_games)))
         game_ids = {}
@@ -184,9 +147,9 @@ def check_games():
                     finished_games.append(GameObject(div, winner, loser, game_id))
                     processed_games.append(game_id)
         
-        open("./files/processedGames", "w").write(convertListToFile(processed_games))
-        writeStandingsToFile(standings)
-        writeBootsObjectToFile(boots)
+        dumpJsonToFile("./files/processedGames", processed_games)
+        dumpJsonToFile("./files/standings", standings)
+        dumpJsonToFile("./files/boots", boots)
         log_message("Number of new finished games: {}".format(len(finished_games)))
         if len(finished_games):
             client.run(TOKEN)
@@ -211,7 +174,7 @@ def run_check_games_iteration():
     log_message("Ran for {}".format(str(run_time)))
 
 def post_standings():
-    standings = getStandingsFromFile()
+    standings = loadFileToJson("./files/standings")
     global standings_strings
     standings_strings.clear()
 
@@ -222,7 +185,7 @@ def post_standings():
 
         output_str = "**{}**\n".format(div)
         for i in range(len(player_arr)):
-            output_str += "{}. {}: {}-{}\n".format(i+1, player_arr[i]["name"], player_arr[i]["wins"], player_arr[i]["losses"])
+            output_str += "\t{}. {}: {}-{}\n".format(i+1, player_arr[i]["name"], player_arr[i]["wins"], player_arr[i]["losses"])
         standings_strings.append(output_str)
     if len(standings_strings):
         client.run(TOKEN)
@@ -236,8 +199,30 @@ def run_post_standings_iteration():
     log_message("Ended run at {}".format(datetime.utcnow().isoformat()), "post_standings")
     log_message("Ran for {}".format(str(run_time)), "post_standings")
 
+def boot_report():
+    boots = loadFileToJson("./files/boots")
+    global boot_string
+    boot_string = "**Wall of Shame (boots)**\n"
+
+    for div, players in boots.items():
+        if len(players):
+            boot_string += "{}:\n".format(div)
+            for id, player in players.items():
+                boot_string += "\t{} boots - {} (ID: {})\n".format(player['boots'], player['name'], id)
+    client.run(TOKEN)
+
+def run_boot_report():
+    start_time = datetime.utcnow()
+    log_message("Started run at {}".format(start_time.isoformat()), "boot_report")
+    boot_report()
+    run_time = datetime.utcnow() - start_time
+    log_message("Ended run at {}".format(datetime.utcnow().isoformat()), "boot_report")
+    log_message("Ran for {}".format(str(run_time)), "boot_report")
+
 if len(sys.argv) > 1:
     if sys.argv[1] == "check_games":
         run_check_games_iteration()
     elif sys.argv[1] == "post_standings":
         run_post_standings_iteration()
+    elif sys.argv[1] == "boot_report":
+        run_boot_report()
