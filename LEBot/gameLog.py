@@ -35,7 +35,7 @@ def log_message(msg, type="check_games"):
         log_writer.write(time_str + msg + "\n")
 
 def format_message(game):
-    return "**" + game.winner + "** defeats **" + game.loser + "**\n" + game.division + "\n<https://www.warzone.com/MultiPlayer?GameID=" + game.game_id + ">"
+    return "**" + game.winner + "** defeats **" + game.loser + "**\n" + game.division + "\n" + game.league + "\n<https://www.warzone.com/MultiPlayer?GameID=" + game.game_id + ">"
 
 def get_channel():
     for guild in client.guilds:
@@ -160,7 +160,8 @@ def check_games():
 
 class GameObject:
     def __init__(self, division, winner, loser, game_id):
-        self.division = division
+        self.division = division.split("-")[0]
+        self.league = division.split("-")[1]
         self.winner = winner
         self.loser = loser
         self.game_id = str(game_id)
@@ -173,19 +174,39 @@ def run_check_games_iteration():
     log_message("Ended run at {}".format(datetime.utcnow().isoformat()))
     log_message("Ran for {}".format(str(run_time)))
 
+LEAGUES_TO_POST_STANDINGS = [
+    "101/Python Annual Championship 2021",
+    "Python/101st P/R League"
+]
+
 def post_standings():
     standings = loadFileToJson("./files/standings")
     global standings_strings
     standings_strings.clear()
 
-    for div, players in standings.items():
-        player_arr = list(players.values())
-        player_arr.sort(key=lambda p: p["wins"], reverse=True)
-        player_arr.sort(key=lambda p: p["losses"])
+    league = ""
 
-        output_str = "**{}**\n".format(div)
+    for div, players in standings.items():
+        if div.split("-")[1] not in LEAGUES_TO_POST_STANDINGS:
+            continue
+        if div.split("-")[1] != league:
+            league = div.split("-")[1]
+            standings_strings.append("**{}**".format(league))
+
+        player_arr = list(players.values())
+
+        # Sort by best potential
+        player_arr.sort(key=lambda p: p["wins"], reverse=True)
+        player_arr.sort(key=lambda p: len(player_arr)-1 + int(p["wins"]) - int(p["losses"]), reverse=True)
+
+        # Sort by most wins
+        # player_arr.sort(key=lambda p: p["losses"])
+        # player_arr.sort(key=lambda p: p["wins"], reverse=True)
+
+        output_str = "{}\n```".format(div.split("-")[0])
         for i in range(len(player_arr)):
             output_str += "\t{}. {}: {}-{}\n".format(i+1, player_arr[i]["name"], player_arr[i]["wins"], player_arr[i]["losses"])
+        output_str += "```"
         standings_strings.append(output_str)
     if len(standings_strings):
         client.run(TOKEN)
@@ -202,13 +223,14 @@ def run_post_standings_iteration():
 def boot_report():
     boots = loadFileToJson("./files/boots")
     global boot_string
-    boot_string = "**Wall of Shame (boots)**\n"
+    boot_string = "**Wall of Shame (boots)**\n```"
 
     for div, players in boots.items():
         if len(players):
-            boot_string += "{}:\n".format(div)
+            boot_string += "{}:\n".format(" - ".join(div.split("-")[::-1]))
             for id, player in players.items():
-                boot_string += "\t{} boots - {} (ID: {})\n".format(player['boots'], player['name'], id)
+                boot_string += "\t{} boot{} - {} (ID: {})\n".format(player['boots'], "s" if int(player['boots']) > 1 else " ", player['name'], id)
+    boot_string += "```"
     client.run(TOKEN)
 
 def run_boot_report():
