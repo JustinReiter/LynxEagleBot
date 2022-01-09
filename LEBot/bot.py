@@ -14,6 +14,7 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 BOT_NAME = os.getenv("BOT_NAME")
 API_EMAIL = os.getenv("API_EMAIL")
 API_TOKEN = os.getenv("API_TOKEN")
+MY_DISCORD_ID = int(os.getenv("DISCORD_ID"))
 
 if (len(sys.argv) > 1 and sys.argv[1] == "live"):
     GUILD = int(os.getenv("DISCORD_GUILD"))
@@ -57,6 +58,9 @@ def send_tournament_query(tournament_id):
         log_message("Game ids not found for tourney id {}: {}".format(tournament_id, res))
     return res.get("gameIDs")
 
+def get_top_players_mtl():
+    return requests.get(url="http://md-ladder.cloudapp.net/api/v1.0/players/?topk=50").json()
+
 def loadFileToJson(filePath):
     with open(filePath, 'r') as reader:
         return json.load(reader)
@@ -66,7 +70,7 @@ def dumpJsonToFile(filePath, data):
         json.dump(data, writer, sort_keys=True, indent=4)
 
 def format_message(game):
-    return "**" + game.winner + "** defeats **" + game.loser + "**\n" + game.division + "\n" + game.league + "\n<https://www.warzone.com/MultiPlayer?GameID=" + game.game_id + ">"
+    return "**" + ", ".join(game.winner) + "** defeats **" + ", ".join(game.loser) + "**\n" + game.division + "\n" + game.league + "\n<https://www.warzone.com/MultiPlayer?GameID=" + game.game_id + ">"
 
 def get_channel():
     for guild in client.guilds:
@@ -80,11 +84,11 @@ def get_channel():
 #########################
 
 class GameObject:
-    def __init__(self, division, winner, loser, game_id):
+    def __init__(self, division, game_id):
         self.division = division.split("-")[0]
         self.league = division.split("-")[1]
-        self.winner = winner
-        self.loser = loser
+        self.winner = []
+        self.loser = []
         self.game_id = str(game_id)
 
 
@@ -118,32 +122,35 @@ async def check_games():
                 for player in game.get("players", {}):
                     if player.get("id") not in standings[div]:
                         standings[div][player.get("id")] = {"name": player.get("name"), "wins": 0, "losses": 0}
+                        if "team" in player:
+                            standings[div][player.get("id")]["team"] = player.get("team")
 
                 if "error" not in game and game.get("state") == "Finished":
                     log_message("Found finished game in {} with id {}".format(div, game_id))
-                    
+                    new_game_obj = GameObject(div, game_id)
+
                     for player in game.get("players"):
                         if standings[div][player.get("id")]["name"] != player.get("name"):
                             standings[div][player.get("id")]["name"] = player.get("name")
 
                         if player.get("state") == "Won":
-                            winner = player.get("name")
+                            new_game_obj.winner.append(player.get("name"))
                             playerObj = standings[div][player.get("id")]
                             playerObj["wins"] += 1
                             standings[div].update({player.get("id"): playerObj})
                         else:
-                            loser = player.get("name")
+                            new_game_obj.loser.append(player.get("name"))
                             playerObj = standings[div][player.get("id")]
                             playerObj["losses"] += 1
                             standings[div].update({player.get("id"): playerObj})
 
                             # Check if loser booted and add to stats if so
                             if player.get("state") == "Booted":
-                                boots[div].setdefault(player.get("id"), {"name": loser, "boots": 0, "links": []})
+                                boots[div].setdefault(player.get("id"), {"name": player.get("name"), "boots": 0, "links": []})
                                 boots[div][player.get("id")]["boots"] += 1
                                 boots[div][player.get("id")]["links"].append(game.get("id"))
                     
-                    finished_games.append(GameObject(div, winner, loser, game_id))
+                    finished_games.append(new_game_obj)
                     processed_games.append(game_id)
         
         dumpJsonToFile("./files/processedGames", processed_games)
@@ -219,6 +226,19 @@ async def boot_report(channel: discord.TextChannel):
     except Exception as err:
         log_exception("ERROR IN boot_report: {}".format(err.args))
 
+async def mtl_players(channel: discord.TextChannel):
+    try:
+        players = get_top_players_mtl()
+
+        output = "**Players in top 50:**\n"
+        for player in players["players"]:
+            if "clan_id" not in player or player["clan_id"] not in [7, 489]:
+                continue
+            output += "{:>2}. {:>4} - {} {}\n".format(player["rank"], player["displayed_rating"], ("<:101st:925466598784004126>" if player["clan_id"] == 7 else "<:python:925466546602643527>"), player["player_name"])
+
+        await channel.send(content=output)
+    except Exception as err:
+        log_exception("ERROR IN mtl_players: {}".format(err.args))
 
 #########################
 ######### Tasks #########
@@ -251,19 +271,55 @@ async def run_boot_report(channel: discord.TextChannel):
 
 are_events_scheduled = False
 
-HELP_MESSAGE = """Biggus Help
-`le!boot_report` - Post the wall of shame (boots) for all events
-`le!links` - Post relevant clan links
+HELP_MESSAGE = """**Biggus Help**
+`b!boot_report` - Post the wall of shame (boots) for all events
+`b!standings` - Post standings of internal events
+`b!links` - Post relevant clan links
+`b!mtl` - Show 101st & Python players on the MTL
+`b!msg <channel> <msg>` - Sorry, this is Justin's command only
+"""
+
+LINKS_MESSAGE = """**Links**
+Python <https://www.warzone.com/Clans/?ID=489>
+Eagles <https://www.warzone.com/Clans/?ID=7>
+CL Sheet <https://docs.google.com/spreadsheets/d/1DAeG0gE0QXSE_JYEH6prEH7mCe-ey6pKFANY7_7Qlf0/edit#gid=1014622740>
 """
 
 @client.event
 async def on_message(message: discord.Message):
-    if message.content.lower() == "le!boot_report":
-        log_message("{}#{} called boot_report".format(message.author.name, message.author.discriminator), "on_message")
-        await run_boot_report(message.channel)
-    elif message.content.lower() == "le!help":
-        log_message("{}#{} called help".format(message.author.name, message.author.discriminator), "on_message")
-        await message.reply(content=HELP_MESSAGE, mention_author=False)
+    try:
+        if message.content.lower() == "b!boot_report":
+            log_message("{}#{} called boot_report".format(message.author.name, message.author.discriminator), "on_message")
+            await run_boot_report(message.channel)
+        elif message.content.lower() == "b!help":
+            log_message("{}#{} called help".format(message.author.name, message.author.discriminator), "on_message")
+            await message.reply(content=HELP_MESSAGE, mention_author=False)
+        elif message.content.lower() == "b!mtl":
+            log_message("{}#{} called mtl".format(message.author.name, message.author.discriminator), "on_message")
+            await mtl_players(message.channel)
+        elif message.content.lower() == "b!links":
+            log_message("{}#{} called links".format(message.author.name, message.author.discriminator), "on_message")
+            await message.channel.send(content=LINKS_MESSAGE)
+        # Below are admin commands
+        elif "b!standings" in message.content.lower() and message.author.id == MY_DISCORD_ID:
+            log_message("{}#{} called standings".format(message.author.name, message.author.discriminator), "on_message")
+            await run_post_standings_job();
+        elif "b!msg" in message.content.lower() and message.author.id == MY_DISCORD_ID:
+            log_message("{}#{} called msg".format(message.author.name, message.author.discriminator), "on_message")
+
+            channel = discord.utils.find(lambda channel: channel.id == int(message.content.split(" ")[1]), client.get_all_channels()) 
+            await channel.send(content=" ".join(message.content.split(" ")[2:]))
+        elif "b!kys" in message.content.lower() and message.author.id == MY_DISCORD_ID:
+            await message.channel.send(content="Ok, I leave now :(")
+            await client.close()
+        elif "b!cg" in message.content.lower() and message.author.id == MY_DISCORD_ID:
+            log_message("{}#{} called cg".format(message.author.name, message.author.discriminator), "on_message")
+            await run_check_games_job()
+
+    except Exception as err:
+        log_exception("ERROR IN post_standings: {}".format(err.args))
+        traceback.print_exc()
+        await message.channel.send("Error occurred in on_message. What are you doing?")
 
 @client.event
 async def on_ready():
