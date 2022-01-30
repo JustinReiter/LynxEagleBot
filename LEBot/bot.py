@@ -8,6 +8,7 @@ from apscheduler.triggers.cron import CronTrigger
 from dotenv import load_dotenv
 from datetime import datetime
 import traceback
+import random
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -16,6 +17,9 @@ API_EMAIL = os.getenv("API_EMAIL")
 API_TOKEN = os.getenv("API_TOKEN")
 MY_DISCORD_ID = int(os.getenv("DISCORD_ID"))
 EAGLE_ROLE_ID = int(os.getenv("EAGLE_ROLE_ID"))
+WARZONE_BOT_ID = int(os.getenv("WARZONE_BOT_ID"))
+CL_LOG_CHANNEL = int(os.getenv("CL_LOG_CHANNEL"))
+SPAM_CHANNEL_ID = int(os.getenv("SPAM_CHANNEL_ID"))
 
 if (len(sys.argv) > 1 and sys.argv[1] == "live"):
     GUILD = int(os.getenv("DISCORD_GUILD"))
@@ -359,12 +363,27 @@ Eagles <https://www.warzone.com/Clans/?ID=7>
 CL Sheet <https://docs.google.com/spreadsheets/d/1DAeG0gE0QXSE_JYEH6prEH7mCe-ey6pKFANY7_7Qlf0/edit#gid=1014622740>
 """
 
+EAGLE_EMOJI = "<:101st:926546465831125042>"
+PYTHON_EMOJI = "<:python:926546465831125042>"
+OTHER_EMOJIS = ["🎉", "🥳", "😎", "💪", "🏅", "🔥"]
+
 @client.event
 async def on_message(message: discord.Message):
     try:
         # IGNORE MESSAGES FROM THE BOT... BAD RECURSION
-        if message.author.id == client.user.id:
+        # IGNORE MESSAGES IN DMs... no hidden spamming
+        if message.author.id == client.user.id or not message.guild:
             return
+
+        # Check if message is from Clot Bot & posting python/101st win
+        if message.author.id == WARZONE_BOT_ID and message.channel.id == CL_LOG_CHANNEL:
+            # New post in proper channel... Check if 101st or python won
+            if message.content.startswith("{101st}"):
+                await message.add_reaction(EAGLE_EMOJI)
+                await message.add_reaction(random.choice(OTHER_EMOJIS))
+            if message.content.startswith("Python"):
+                await message.add_reaction(PYTHON_EMOJI)
+                await message.add_reaction(random.choice(OTHER_EMOJIS))
 
         if message.content.lower() == "b!boot_report":
             log_message("{}#{} called boot_report".format(message.author.name, message.author.discriminator), "on_message")
@@ -421,7 +440,7 @@ async def on_ready():
     if not are_events_scheduled:
         scheduler = AsyncIOScheduler()
         scheduler.add_job(run_check_games_job, CronTrigger(hour="*", minute="0", second="0"))
-        # scheduler.add_job(run_post_standings_job, CronTrigger(day="*", hour="16", minute="5", second="0"))
+        scheduler.add_job(run_post_standings_job, CronTrigger(day="*/3", hour="16", minute="5", second="0"))
         scheduler.start()
         log_message("Bot started scheduled tasks", "on_ready")
         are_events_scheduled = True
@@ -447,18 +466,29 @@ COMMUNITY_EVENTS = """
 
 @client.event
 async def on_member_update(before: discord.Member, after: discord.Member):
-    new_roles = set(after.roles) - set(before.roles)
-    eagle_role = after.guild.get_role(EAGLE_ROLE_ID)
+    try:
+        new_roles = set(after.roles) - set(before.roles)
+        eagle_role = after.guild.get_role(EAGLE_ROLE_ID)
 
-    # Check if member got the eagle role
-    if eagle_role in new_roles:
-        log_message("Sending welcome message to: {}#{}".format(after.name, after.discriminator), "on_member_update")
-        embed_msg = discord.Embed(title="Welcome to 101st!", description="Events to get involved in:")
-        embed_msg.set_footer(text="Note: this bot does not read messages. Ping Platinum in the server if you have questions.")
-        embed_msg.add_field(name="Internally in 101st", value=INTERNAL_EVENTS)
-        embed_msg.add_field(name="Community Events", value=COMMUNITY_EVENTS)
-        await after.send(embed=embed_msg)
+        # Check if member got the eagle role
+        if eagle_role in new_roles:
+            log_message("Sending welcome message to: {}#{}".format(after.name, after.discriminator), "on_member_update")
+            embed_msg = discord.Embed(title="Welcome to 101st!", description="Events to get involved in:")
+            embed_msg.set_footer(text="Note: this bot does not read messages. Ping Platinum in the server if you have questions.")
+            embed_msg.add_field(name="Internally in 101st", value=INTERNAL_EVENTS)
+            embed_msg.add_field(name="Community Events", value=COMMUNITY_EVENTS)
+            await after.send(embed=embed_msg)
+            
+            # Message sent successfully, inform server
+            channel = discord.utils.find(lambda channel: channel.id == SPAM_CHANNEL_ID, client.get_all_channels()) 
+            await channel.send(content="Successfully sent the 101st welcome message to {}#{}".format(after.name, after.discriminator))
+    except Exception as err:
+        log_exception("ERROR IN on_member_update: {}".format(err.args))
+        traceback.print_exc()
 
+        # Message sent unsuccessfully, inform server
+        channel = discord.utils.find(lambda channel: channel.id == SPAM_CHANNEL_ID, client.get_all_channels()) 
+        await channel.send(content="Encountered error while sending 101st welcome message to {}#{}\n\nError: {}".format(after.name, after.discriminator, err.args))
 
 client.run(TOKEN)
 
