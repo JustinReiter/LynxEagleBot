@@ -32,6 +32,7 @@ else:
 
 intents = discord.Intents.default()
 intents.members = True
+intents.messages = True
 client = discord.Client(intents=intents)
 
 
@@ -365,7 +366,7 @@ CL Sheet <https://docs.google.com/spreadsheets/d/1DAeG0gE0QXSE_JYEH6prEH7mCe-ey6
 
 EAGLE_EMOJI = "<:101st:926546465831125042>"
 PYTHON_EMOJI = "<:python:926546465831125042>"
-OTHER_EMOJIS = ["🎉", "🥳", "😎", "💪", "🏅", "🔥"]
+OTHER_EMOJIS = ["🎉", "🥳", "😎", "💪", "🏅", "🔥", "❤️", "🙌", "🤌", "👌", "<:doggo:387080112815865865>"]
 
 @client.event
 async def on_message(message: discord.Message):
@@ -378,11 +379,13 @@ async def on_message(message: discord.Message):
         # Check if message is from Clot Bot & posting python/101st win
         if message.author.id == WARZONE_BOT_ID and message.channel.id == CL_LOG_CHANNEL:
             # New post in proper channel... Check if 101st or python won
-            if message.content.startswith("{101st}"):
+            if message.content.startswith("**{101st}**"):
                 await message.add_reaction(EAGLE_EMOJI)
                 await message.add_reaction(random.choice(OTHER_EMOJIS))
-            if message.content.startswith("Python"):
+                await message.add_reaction(random.choice(OTHER_EMOJIS))
+            if message.content.startswith("**Python**"):
                 await message.add_reaction(PYTHON_EMOJI)
+                await message.add_reaction(random.choice(OTHER_EMOJIS))
                 await message.add_reaction(random.choice(OTHER_EMOJIS))
 
         if message.content.lower() == "b!boot_report":
@@ -399,7 +402,7 @@ async def on_message(message: discord.Message):
             await message.channel.send(content=LINKS_MESSAGE)
         elif "b!standings" in message.content.lower():
             log_message("{}#{} called standings".format(message.author.name, message.author.discriminator), "on_message")
-            await run_post_standings_job();
+            await run_post_standings_job()
         # Below are admin commands
         elif "b!msg" in message.content.lower() and message.author.id == MY_DISCORD_ID:
             log_message("{}#{} called msg".format(message.author.name, message.author.discriminator), "on_message")
