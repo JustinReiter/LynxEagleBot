@@ -94,8 +94,8 @@ def get_channel():
 
 class GameObject:
     def __init__(self, division, game_id):
-        self.division = division.split("-")[0]
-        self.league = division.split("-")[1]
+        self.league = division.split("-")[0]
+        self.division = division.split("-")[1]
         self.winner = []
         self.loser = []
         self.game_id = str(game_id)
@@ -191,10 +191,10 @@ async def post_standings():
         league = ""
 
         for div, players in standings.items():
-            if div.split("-")[1] not in LEAGUES_TO_POST_STANDINGS:
+            if div.split("-")[0] not in LEAGUES_TO_POST_STANDINGS:
                 continue
-            if div.split("-")[1] != league:
-                league = div.split("-")[1]
+            if div.split("-")[0] != league:
+                league = div.split("-")[0]
                 standings_strings.append("**{}**".format(league))
 
             # Check if tournament is teams
@@ -220,7 +220,7 @@ async def post_standings():
             # player_arr.sort(key=lambda p: p["losses"])
             # player_arr.sort(key=lambda p: p["wins"], reverse=True)
 
-            output_str = "{}\n```".format(div.split("-")[0])
+            output_str = "{}\n```".format(div.split("-")[1])
             for i in range(len(player_arr)):
                 output_str += "\t{}. {}: {}-{}\n".format(i+1, ", ".join(player_arr[i]["name"]), player_arr[i]["wins"], player_arr[i]["losses"])
             output_str += "```"
@@ -239,8 +239,14 @@ async def boot_report(channel: discord.TextChannel):
         boot_string = "**Wall of Shame (boots)**\n```"
 
         for div, players in boots.items():
+            if len(boot_string) > 1500:
+                # Reset string if it is too long
+                boot_string += "```"
+                await channel.send(content=boot_string)
+                boot_string = "```"
+            
             if len(players):
-                boot_string += "{}:\n".format(" - ".join(div.split("-")[::-1]))
+                boot_string += "{}:\n".format(" - ".join(div.split("-")))
                 for id, player in players.items():
                     boot_string += "\t{} boot{} - {} (ID: {})\n".format(player['boots'], "s" if int(player['boots']) > 1 else " ", player['name'], id)
         boot_string += "```"

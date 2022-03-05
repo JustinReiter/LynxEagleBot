@@ -1,4 +1,5 @@
 .*
 files/
-logs
+logs/
 errors/
+archived_files/
