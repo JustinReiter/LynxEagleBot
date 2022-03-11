@@ -370,8 +370,8 @@ Eagles <https://www.warzone.com/Clans/?ID=7>
 CL Sheet <https://docs.google.com/spreadsheets/d/1DAeG0gE0QXSE_JYEH6prEH7mCe-ey6pKFANY7_7Qlf0/edit#gid=1014622740>
 """
 
-EAGLE_EMOJI = "<:101st:926546465831125042>"
-PYTHON_EMOJI = "<:python:926546465831125042>"
+EAGLE_EMOJI = "<:101st:925466598784004126>"
+PYTHON_EMOJI = "<:python:925466546602643527>"
 OTHER_EMOJIS = ["🎉", "🥳", "😎", "💪", "🏅", "🔥", "❤️", "🙌", "🤌", "👌", "<:doggo:387080112815865865>"]
 
 @client.event
