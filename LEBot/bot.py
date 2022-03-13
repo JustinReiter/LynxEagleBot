@@ -386,13 +386,21 @@ async def on_message(message: discord.Message):
         if message.author.id == WARZONE_BOT_ID and message.channel.id == CL_LOG_CHANNEL:
             # New post in proper channel... Check if 101st or python won
             if message.content.startswith("**{101st}**"):
-                await message.add_reaction(EAGLE_EMOJI)
-                await message.add_reaction(random.choice(OTHER_EMOJIS))
-                await message.add_reaction(random.choice(OTHER_EMOJIS))
+                try:
+                    await message.add_reaction(EAGLE_EMOJI)
+                    await message.add_reaction(random.choice(OTHER_EMOJIS))
+                    await message.add_reaction(random.choice(OTHER_EMOJIS))
+                except Exception as err:
+                    log_exception("ERROR IN on_message - 101st react: {}".format(err.args))
+                    traceback.print_exc()
             if message.content.startswith("**Python**"):
-                await message.add_reaction(PYTHON_EMOJI)
-                await message.add_reaction(random.choice(OTHER_EMOJIS))
-                await message.add_reaction(random.choice(OTHER_EMOJIS))
+                try:
+                    await message.add_reaction(PYTHON_EMOJI)
+                    await message.add_reaction(random.choice(OTHER_EMOJIS))
+                    await message.add_reaction(random.choice(OTHER_EMOJIS))
+                except Exception as err:
+                    log_exception("ERROR IN on_message - Python react: {}".format(err.args))
+                    traceback.print_exc()
 
         if message.content.lower() == "b!boot_report":
             log_message("{}#{} called boot_report".format(message.author.name, message.author.discriminator), "on_message")
