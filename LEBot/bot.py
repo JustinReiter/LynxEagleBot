@@ -180,7 +180,6 @@ async def check_games():
 
 
 LEAGUES_TO_POST_STANDINGS = [
-    "Python/101st P/R League #2"
 ]
 
 async def post_standings():
@@ -309,12 +308,18 @@ async def list_all(channel: discord.TextChannel):
         output_str = "**Stored tournamets:**\n```"
         for [name, id] in tournament_ids.items():
             output_str += "\t- {} (ID: {})\n".format(name, id)
+            if len(output_str) > 1500:
+                await channel.send(content="{}```".format(output_str))
+                output_str = "```"
         output_str += "```\n"
         
         # Games
         output_str += "**Stored games:**\n```"
         for [name, id] in game_ids.items():
             output_str += "\t- {} (ID: {})\n".format(name, id)
+            if len(output_str) > 1500:
+                await channel.send(content="{}```".format(output_str))
+                output_str = "```"
         output_str += "```"
         
         await channel.send(content=output_str)
