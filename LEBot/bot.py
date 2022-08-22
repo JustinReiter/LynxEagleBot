@@ -3,6 +3,7 @@ import discord
 import sys
 import json
 import requests
+import socket
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from dotenv import load_dotenv
@@ -443,6 +444,15 @@ async def on_message(message: discord.Message):
         elif "b!ls" in message.content.lower() and message.author.id == MY_DISCORD_ID:
             log_message("{}#{} called ls".format(message.author.name, message.author.discriminator), "on_message")
             await list_all(message.channel)
+        elif "b!ip" in message.content.lower() and message.author.id == MY_DISCORD_ID:
+            log_message("{}#{} called ip".format(message.author.name, message.author.discriminator), "on_message")
+
+            gw = os.popen("ip -4 route show default").read().split()
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect((gw[2], 0))
+            ipaddr = s.getsockname()[0]
+            host = socket.gethostname()
+            await message.channel.send(content="RPI is connected to {} (IP: {})".format(host, ipaddr))
         elif message.content.lower().startswith("b!"):
             log_message("{}#{} used invalid command: `{}`".format(message.author.name, message.author.discriminator, message.content), "on_message")
             await message.channel.send(content="You used an invalid command or do not have the correct permissions. Use `b!help` to see a list of commands.")
