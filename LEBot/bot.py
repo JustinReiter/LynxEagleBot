@@ -444,8 +444,8 @@ async def on_message(message: discord.Message):
         elif "b!ls" in message.content.lower() and message.author.id == MY_DISCORD_ID:
             log_message("{}#{} called ls".format(message.author.name, message.author.discriminator), "on_message")
             await list_all(message.channel)
-        elif "b!ip" in message.content.lower() and message.author.id == MY_DISCORD_ID:
-            log_message("{}#{} called ip".format(message.author.name, message.author.discriminator), "on_message")
+        elif "b!ipi" in message.content.lower() and message.author.id == MY_DISCORD_ID:
+            log_message("{}#{} called ipi".format(message.author.name, message.author.discriminator), "on_message")
 
             gw = os.popen("ip -4 route show default").read().split()
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -453,6 +453,11 @@ async def on_message(message: discord.Message):
             ipaddr = s.getsockname()[0]
             host = socket.gethostname()
             await message.channel.send(content="RPI is connected to {} (IP: {})".format(host, ipaddr))
+        elif "b!ipe" in message.content.lower() and message.author.id == MY_DISCORD_ID:
+            log_message("{}#{} called ipe".format(message.author.name, message.author.discriminator), "on_message")
+            ip = requests.get('https://checkip.amazonaws.com').text.strip()
+
+            await message.channel.send(content="RPI's IP address is {}".format(ip))
         elif message.content.lower().startswith("b!"):
             log_message("{}#{} used invalid command: `{}`".format(message.author.name, message.author.discriminator, message.content), "on_message")
             await message.channel.send(content="You used an invalid command or do not have the correct permissions. Use `b!help` to see a list of commands.")
