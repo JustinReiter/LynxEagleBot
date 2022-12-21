@@ -368,6 +368,9 @@ HELP_MESSAGE = """**Biggus Help**
 `b!addt <tourney-id> tournamentName-leagueName` - Sorry, this is Justin's command only
 `b!addg <game-id> tournamentName-leagueName` - Sorry, this is Justin's command only
 `b!ls` - Sorry, this is Justin's command only
+`b!rgroups <num-groups> <token1> <token2> ...` - Randomly sorts all of the tokens evenly across the number of groups set
+`b!rgroup <group1> <group2> ... <item-to-sort>` -  Randomly assigns itemToSort to a group
+`b!rorder <token1> <token2> ...` - Randomly shuffles list of tokens
 """
 
 LINKS_MESSAGE = """**Links**
@@ -423,7 +426,7 @@ async def on_message(message: discord.Message):
             # show relevant clan links
             log_message("{}#{} called links".format(message.author.name, message.author.discriminator), "on_message")
             await message.channel.send(content=LINKS_MESSAGE)
-        elif message.content.lower().startswith("b!group"):
+        elif message.content.lower().startswith("b!rgroups"):
             # random groups command
             tokens = message.content.split(' ')
             multiplicity = int(tokens[1])
@@ -441,7 +444,31 @@ async def on_message(message: discord.Message):
                 output_str += 'Group {}:\t{}\n'.format(group, ', '.join(shuffled_groups[index:index+size]))
                 index += size
 
-            log_message("{}#{} called random. Mulitplicity: {}. Payload: '{}'".format(message.author.name, message.author.discriminator, multiplicity, ", ".join(shuffled_groups)), "on_message")
+            log_message("{}#{} called random. Mulitplicity: {}. Payload: '{}'".format(message.author.name, message.author.discriminator, multiplicity,shuffled_groups), "on_message")
+            await message.channel.send(content=output_str)
+        elif message.content.lower().startswith("b!rgroup"):
+            # Arrange item to random group
+            tokens = message.content.split(' ')
+            groups = tokens[1:-1]
+            item_to_sort = tokens[-1]
+            rand_group = random.choice(groups)
+
+            # create output string
+            output_str = '{}: {}'.format(item_to_sort, rand_group)
+            log_message("{}#{} called random. Groups: {}. ItemToSort: {}. Payload: '{}'".format(message.author.name, message.author.discriminator, groups, item_to_sort, rand_group), "on_message")
+            await message.channel.send(content=output_str)
+        elif message.content.lower().startswith("b!rorder"):
+            # create a randomized order
+            tokens = message.content.split(' ')
+            shuffled_groups = tokens[1:]
+            random.shuffle(shuffled_groups)
+
+            # create output string
+            output_str = '**__Randomized Order:__**\n'
+            for i in range(len(shuffled_groups)):
+                output_str += '{}. {}\n'.format(i+1, shuffled_groups[i])
+
+            log_message("{}#{} called rorder. Original: {}. Payload: '{}'".format(message.author.name, message.author.discriminator, tokens[1:], shuffled_groups), "on_message")
             await message.channel.send(content=output_str)
         elif "b!standings" in message.content.lower():
             log_message("{}#{} called standings".format(message.author.name, message.author.discriminator), "on_message")
