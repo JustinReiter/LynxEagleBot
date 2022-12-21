@@ -43,17 +43,17 @@ client = discord.Client(intents=intents)
 
 def log_message(msg: str, type="check_games"):
     time_str = "[" + datetime.now().isoformat() + "] {}{}: ".format(type, " [TEST]" if DEBUG_MODE else "")
-    print(time_str + msg)
+    print("{}{}".format(time_str, msg.encode()))
     with open("./logs/{}.txt".format(datetime.now().isoformat()[:10]), 'a') as log_writer:
-        log_writer.write(time_str + msg + "\n")
+        log_writer.write("{}{}\n".format(time_str, msg.encode()))
 
 def log_exception(msg: str):
     time_str = "[" + datetime.now().isoformat() + "] {}{}: ".format(type, " [TEST]" if DEBUG_MODE else "")
-    print(time_str + msg)
+    print("{}{}".format(time_str, msg.encode()))
     with open("./logs/{}.txt".format(datetime.now().isoformat()[:10]), 'a') as log_writer:
-        log_writer.write(time_str + msg + "\n")
+        log_writer.write("{}{}\n".format(time_str, msg.encode()))
     with open("./errors/{}.txt".format(datetime.now().isoformat()[:10]), 'a') as log_writer:
-        log_writer.write(time_str + msg + "\n")
+        log_writer.write("{}{}\n".format(time_str, msg.encode()))
 
 def send_game_query(game_id):
     url = "https://www.warzone.com/API/GameFeed?GameID=" + str(game_id)
