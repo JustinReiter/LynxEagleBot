@@ -412,14 +412,37 @@ async def on_message(message: discord.Message):
             log_message("{}#{} called boot_report".format(message.author.name, message.author.discriminator), "on_message")
             await run_boot_report(message.channel)
         elif message.content.lower() == "b!help":
+            # show help message
             log_message("{}#{} called help".format(message.author.name, message.author.discriminator), "on_message")
             await message.reply(content=HELP_MESSAGE, mention_author=False)
         elif message.content.lower() == "b!mtl":
+            # show python & eagle members in top 50
             log_message("{}#{} called mtl".format(message.author.name, message.author.discriminator), "on_message")
             await mtl_players(message.channel)
         elif message.content.lower() == "b!links":
+            # show relevant clan links
             log_message("{}#{} called links".format(message.author.name, message.author.discriminator), "on_message")
             await message.channel.send(content=LINKS_MESSAGE)
+        elif message.content.lower().startswith("b!group"):
+            # random groups command
+            tokens = message.content.split(' ')
+            multiplicity = int(tokens[1])
+            shuffled_groups = tokens[2:]
+            random.shuffle(shuffled_groups)
+
+            # get size values
+            group_size, remainder, index = len(shuffled_groups) // multiplicity, len(shuffled_groups) % multiplicity, 0
+
+            # create output string
+            output_str = '**__Groups:__**\n'
+            for group in range(1, multiplicity+1):
+                size = group_size + (1 if remainder > 0 else 0)
+                remainder -= 1
+                output_str += 'Group {}:\t{}\n'.format(group, ', '.join(shuffled_groups[index:index+size]))
+                index += size
+
+            log_message("{}#{} called random. Mulitplicity: {}. Payload: '{}'".format(message.author.name, message.author.discriminator, multiplicity, ", ".join(shuffled_groups)), "on_message")
+            await message.channel.send(content=output_str)
         elif "b!standings" in message.content.lower():
             log_message("{}#{} called standings".format(message.author.name, message.author.discriminator), "on_message")
             await run_post_standings_job()
