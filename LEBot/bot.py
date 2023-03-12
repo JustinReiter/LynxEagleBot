@@ -398,18 +398,21 @@ async def on_message(message: discord.Message):
             if message.content.startswith("**{101st}**"):
                 try:
                     await message.add_reaction(EAGLE_EMOJI)
-                    await message.add_reaction(random.choice(OTHER_EMOJIS))
-                    await message.add_reaction(random.choice(OTHER_EMOJIS))
                 except Exception as err:
                     log_exception("ERROR IN on_message - 101st react: {}".format(err.args))
                     traceback.print_exc()
             if message.content.startswith("**Python**"):
                 try:
                     await message.add_reaction(PYTHON_EMOJI)
+                except Exception as err:
+                    log_exception("ERROR IN on_message - Python react: {}".format(err.args))
+                    traceback.print_exc()
+            if "**{101st}**" in message.content ^ "**Python**" in message.content:
+                try:
                     await message.add_reaction(random.choice(OTHER_EMOJIS))
                     await message.add_reaction(random.choice(OTHER_EMOJIS))
                 except Exception as err:
-                    log_exception("ERROR IN on_message - Python react: {}".format(err.args))
+                    log_exception("ERROR IN on_message - Adding other reacts: {}".format(err.args))
                     traceback.print_exc()
 
         if message.content.lower() == "b!boot_report":
