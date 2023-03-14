@@ -500,7 +500,7 @@ async def on_message(message: discord.Message):
             await list_all(message.channel)
         elif "b!temp" in message.content.lower() and message.author.id == MY_DISCORD_ID:
             log_message("{}#{} called temp".format(message.author.name, message.author.discriminator), "on_message")
-            await message.channel.send(content="{}".format(subprocess.run(['/opt/vc/bin/vcgencmd measure_temp'], shell=True, stdout=subprocess.PIPE).stdout.decode('utf-8')))
+            await message.channel.send(content="{}".format(subprocess.run(['vcgencmd measure_temp'], shell=True, stdout=subprocess.PIPE).stdout.decode('utf-8')))
         elif "b!ipi" in message.content.lower() and message.author.id == MY_DISCORD_ID:
             log_message("{}#{} called ipi".format(message.author.name, message.author.discriminator), "on_message")
 
