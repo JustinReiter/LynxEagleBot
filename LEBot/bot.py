@@ -408,7 +408,7 @@ async def on_message(message: discord.Message):
                     log_exception("ERROR IN on_message - Python react: {}".format(err.args))
                     traceback.print_exc()
             # Only post extra emojis if one of the two won AND the other clan wasn't defeated
-            if (message.content.startswith("**{101st}**") or message.content.startswith("**Python**")) and ("**{101st}**" in message.content ^ "**Python**" in message.content):
+            if (message.content.startswith("**{101st}**") or message.content.startswith("**Python**")) and (("**{101st}**" in message.content) ^ ("**Python**" in message.content)):
                 try:
                     await message.add_reaction(random.choice(OTHER_EMOJIS))
                     await message.add_reaction(random.choice(OTHER_EMOJIS))
