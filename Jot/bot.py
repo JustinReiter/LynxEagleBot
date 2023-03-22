@@ -46,6 +46,7 @@ Languages
 
 Other
 :office_worker: - Politics: Gives you acces to Political orientated Channels."""
+
 emojis = ["✳️", "🎲", "🎮", "🎗️", "🏅", "🇳🇱", "🇫🇷", "🇩🇪", "🧑‍💼"]
 
 emote_to_role = {
