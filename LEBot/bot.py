@@ -542,21 +542,14 @@ async def on_ready():
 
 
 INTERNAL_EVENTS = """
-- [2v2 Python/101st Tournament](https://www.warzone.com/Forum/594941-2v2-python101st-team-event-2-biomes)
-- [Promotion/Relegation League](https://www.warzone.com/Forum/596430-101python-pr-league-season-3-strat)
-- [King of the Hill](https://www.warzone.com/Forum/565202-king-hill)
-- [Annual Championship ](https://www.warzone.com/Forum/563883-101stpython-annual-championship-2021)
-- [101st Tournament Series](https://www.warzone.com/Forum/565199-101st-tournament-series)
-- [Clan Wars](https://www.warzone.com/Clans/War)
 - [Our Discord Server](https://www.warzone.com/Forum/545882-discord-clan-server) (Please feel free to link a game of yours (in the game review channel) for analysing by some of our senior clan members to learn & improve)
 """
 
 COMMUNITY_EVENTS = """
-- [Warzone Championship 2021](https://www.warzone.com/Forum/594555-warzone-champions-2021)
+- [Clan Wars](https://www.warzone.com/Clans/War)
 - [AWP Tour](https://www.warzone.com/Forum/262655-awp-world-tour-magazine)
 - [Multi-Day Ladder](http://md-ladder.cloudapp.net/allplayers)
 - [WarZone Ladders](https://www.warzone.com/Ladders)
-- [Promotion/Relegation League (Old Ladder)](https://www.warzone.com/Forum/576907-promotion-relegation-league-season-33)
 """
 
 @client.event
@@ -569,7 +562,7 @@ async def on_member_update(before: discord.Member, after: discord.Member):
         if eagle_role in new_roles:
             log_message("Sending welcome message to: {}#{}".format(after.name, after.discriminator), "on_member_update")
             embed_msg = discord.Embed(title="Welcome to 101st!", description="Events to get involved in:")
-            embed_msg.set_footer(text="Note: this bot does not read messages. Ping Platinum in the server if you have questions.")
+            embed_msg.set_footer(text="Note: this bot does not read messages. Ping Gak in the server if you have questions.")
             embed_msg.add_field(name="Internally in 101st", value=INTERNAL_EVENTS)
             embed_msg.add_field(name="Community Events", value=COMMUNITY_EVENTS)
             await after.send(embed=embed_msg)
