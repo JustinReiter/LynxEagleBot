@@ -23,13 +23,13 @@ WARZONE_BOT_ID = int(os.getenv("WARZONE_BOT_ID"))
 CL_LOG_CHANNEL = int(os.getenv("CL_LOG_CHANNEL"))
 SPAM_CHANNEL_ID = int(os.getenv("SPAM_CHANNEL_ID"))
 
-if (len(sys.argv) > 1 and sys.argv[1] == "live"):
+if len(sys.argv) > 1 and sys.argv[1] == "live":
     GUILD = int(os.getenv("DISCORD_GUILD"))
     PR_LOG_CHANNEL = int(os.getenv("PR_LOG_CHANNEL"))
     DEBUG_MODE = False
 else:
     GUILD = int(os.getenv("DISCORD_GUILD_TEST"))
-    PR_LOG_CHANNEL = int(os.getenv("PR_LOG_CHANNEL_TEST"))    
+    PR_LOG_CHANNEL = int(os.getenv("PR_LOG_CHANNEL_TEST"))
     DEBUG_MODE = True
 
 intents = discord.Intents.default()
@@ -42,46 +42,85 @@ client = discord.Client(intents=intents)
 ######## HELPERS ########
 #########################
 
+
 def log_message(msg: str, type="check_games"):
-    time_str = "[" + datetime.now().isoformat() + "] {}{}: ".format(type, " [TEST]" if DEBUG_MODE else "")
+    time_str = (
+        "["
+        + datetime.now().isoformat()
+        + "] {}{}: ".format(type, " [TEST]" if DEBUG_MODE else "")
+    )
     print("{}{}".format(time_str, msg.encode()))
-    with open("./logs/{}.txt".format(datetime.now().isoformat()[:10]), 'a') as log_writer:
+    with open(
+        "./logs/{}.txt".format(datetime.now().isoformat()[:10]), "a"
+    ) as log_writer:
         log_writer.write("{}{}\n".format(time_str, msg.encode()))
 
+
 def log_exception(msg: str):
-    time_str = "[" + datetime.now().isoformat() + "] {}{}: ".format(type, " [TEST]" if DEBUG_MODE else "")
+    time_str = (
+        "["
+        + datetime.now().isoformat()
+        + "] {}{}: ".format(type, " [TEST]" if DEBUG_MODE else "")
+    )
     print("{}{}".format(time_str, msg.encode()))
-    with open("./logs/{}.txt".format(datetime.now().isoformat()[:10]), 'a') as log_writer:
+    with open(
+        "./logs/{}.txt".format(datetime.now().isoformat()[:10]), "a"
+    ) as log_writer:
         log_writer.write("{}{}\n".format(time_str, msg.encode()))
-    with open("./errors/{}.txt".format(datetime.now().isoformat()[:10]), 'a') as log_writer:
+    with open(
+        "./errors/{}.txt".format(datetime.now().isoformat()[:10]), "a"
+    ) as log_writer:
         log_writer.write("{}{}\n".format(time_str, msg.encode()))
+
 
 def send_game_query(game_id):
     url = "https://www.warzone.com/API/GameFeed?GameID=" + str(game_id)
     params = {"Email": API_EMAIL, "APIToken": API_TOKEN}
     return requests.get(url=url, params=params).json()
 
+
 def send_tournament_query(tournament_id):
     url = "https://www.warzone.com/API/GameIDFeed?TournamentID=" + str(tournament_id)
-    params = {"Email": API_EMAIL, "APIToken":API_TOKEN}
+    params = {"Email": API_EMAIL, "APIToken": API_TOKEN}
     res = requests.get(url=url, params=params).json()
     if "gameIDs" not in res:
-        log_message("Game ids not found for tourney id {}: {}".format(tournament_id, res))
+        log_message(
+            "Game ids not found for tourney id {}: {}".format(tournament_id, res)
+        )
     return res.get("gameIDs")
 
+
 def get_top_players_mtl():
-    return requests.get(url="http://md-ladder.cloudapp.net/api/v1.0/players/?topk=50").json()
+    return requests.get(
+        url="http://md-ladder.cloudapp.net/api/v1.0/players/?topk=50"
+    ).json()
+
 
 def loadFileToJson(filePath):
-    with open(filePath, 'r') as reader:
+    with open(filePath, "r") as reader:
         return json.load(reader)
+
 
 def dumpJsonToFile(filePath, data):
     with open(filePath, "w") as writer:
         json.dump(data, writer, sort_keys=True, indent=4)
 
+
 def format_message(game):
-    return "**" + ", ".join(game.winner) + "** defeats **" + ", ".join(game.loser) + "**\n" + game.division + "\n" + game.league + "\n<https://www.warzone.com/MultiPlayer?GameID=" + game.game_id + ">"
+    return (
+        "**"
+        + ", ".join(game.winner)
+        + "** defeats **"
+        + ", ".join(game.loser)
+        + "**\n"
+        + game.division
+        + "\n"
+        + game.league
+        + "\n<https://www.warzone.com/MultiPlayer?GameID="
+        + game.game_id
+        + ">"
+    )
+
 
 def get_channel():
     for guild in client.guilds:
@@ -90,9 +129,11 @@ def get_channel():
                 if channel.id == PR_LOG_CHANNEL:
                     return channel
 
+
 #########################
 ######### OBJS ##########
 #########################
+
 
 class GameObject:
     def __init__(self, division, game_id):
@@ -107,6 +148,7 @@ class GameObject:
 ######### FUNCS #########
 #########################
 
+
 async def check_games():
     try:
         finished_games = []
@@ -116,7 +158,9 @@ async def check_games():
         standings = loadFileToJson("./files/standings")
         boots = loadFileToJson("./files/boots")
 
-        log_message("Number of already processed games: {} ".format(len(processed_games)))
+        log_message(
+            "Number of already processed games: {} ".format(len(processed_games))
+        )
 
         for key, val in tournament_ids.items():
             game_ids[key] = send_tournament_query(val)
@@ -127,22 +171,36 @@ async def check_games():
             if div not in boots:
                 boots[div] = {}
             unprocessed_games = list(set(game_ids[div]) - set(processed_games))
-            log_message("Number of games in {} to check: {}".format(div, len(unprocessed_games)))
+            log_message(
+                "Number of games in {} to check: {}".format(div, len(unprocessed_games))
+            )
             for game_id in unprocessed_games:
                 game = send_game_query(game_id)
                 for player in game.get("players", {}):
                     if player.get("id") not in standings[div]:
-                        standings[div][player.get("id")] = {"name": player.get("name"), "wins": 0, "losses": 0}
+                        standings[div][player.get("id")] = {
+                            "name": player.get("name"),
+                            "wins": 0,
+                            "losses": 0,
+                        }
                         if "team" in player:
-                            standings[div][player.get("id")]["team"] = player.get("team")
+                            standings[div][player.get("id")]["team"] = player.get(
+                                "team"
+                            )
 
                 if "error" not in game and game.get("state") == "Finished":
-                    log_message("Found finished game in {} with id {}".format(div, game_id))
+                    log_message(
+                        "Found finished game in {} with id {}".format(div, game_id)
+                    )
                     new_game_obj = GameObject(div, game_id)
 
                     for player in game.get("players"):
-                        if standings[div][player.get("id")]["name"] != player.get("name"):
-                            standings[div][player.get("id")]["name"] = player.get("name")
+                        if standings[div][player.get("id")]["name"] != player.get(
+                            "name"
+                        ):
+                            standings[div][player.get("id")]["name"] = player.get(
+                                "name"
+                            )
 
                         if player.get("state") == "Won":
                             new_game_obj.winner.append(player.get("name"))
@@ -157,13 +215,22 @@ async def check_games():
 
                             # Check if loser booted and add to stats if so
                             if player.get("state") == "Booted":
-                                boots[div].setdefault(player.get("id"), {"name": player.get("name"), "boots": 0, "links": []})
+                                boots[div].setdefault(
+                                    player.get("id"),
+                                    {
+                                        "name": player.get("name"),
+                                        "boots": 0,
+                                        "links": [],
+                                    },
+                                )
                                 boots[div][player.get("id")]["boots"] += 1
-                                boots[div][player.get("id")]["links"].append(game.get("id"))
-                    
+                                boots[div][player.get("id")]["links"].append(
+                                    game.get("id")
+                                )
+
                     finished_games.append(new_game_obj)
                     processed_games.append(game_id)
-        
+
         dumpJsonToFile("./files/processedGames", processed_games)
         dumpJsonToFile("./files/standings", standings)
         dumpJsonToFile("./files/boots", boots)
@@ -172,7 +239,14 @@ async def check_games():
             channel = get_channel()
 
             for game in finished_games:
-                embed = discord.Embed(title="**{}** defeats **{}**".format(", ".join(game.winner), ", ".join(game.loser)), description="[Game Link](https://www.warzone.com/MultiPlayer?GameID={})".format(game.game_id))
+                embed = discord.Embed(
+                    title="**{}** defeats **{}**".format(
+                        ", ".join(game.winner), ", ".join(game.loser)
+                    ),
+                    description="[Game Link](https://www.warzone.com/MultiPlayer?GameID={})".format(
+                        game.game_id
+                    ),
+                )
                 embed.add_field(name=game.division, value=game.league)
                 await channel.send(embed=embed)
                 # await channel.send(content=format_message(game))
@@ -181,8 +255,8 @@ async def check_games():
         traceback.print_exc()
 
 
-LEAGUES_TO_POST_STANDINGS = [
-]
+LEAGUES_TO_POST_STANDINGS = []
+
 
 async def post_standings():
     try:
@@ -203,7 +277,11 @@ async def post_standings():
                 teams = {}
                 for player in players.values():
                     if player["team"] not in teams:
-                        teams[player["team"]] = {"name": [player["name"]], "wins": player["wins"], "losses": player["losses"]}
+                        teams[player["team"]] = {
+                            "name": [player["name"]],
+                            "wins": player["wins"],
+                            "losses": player["losses"],
+                        }
                     else:
                         teams[player["team"]]["name"].append(player["name"])
                 player_arr = list(teams.values())
@@ -215,7 +293,10 @@ async def post_standings():
 
             # Sort by best potential
             player_arr.sort(key=lambda p: p["wins"], reverse=True)
-            player_arr.sort(key=lambda p: len(player_arr)-1 + int(p["wins"]) - int(p["losses"]), reverse=True)
+            player_arr.sort(
+                key=lambda p: len(player_arr) - 1 + int(p["wins"]) - int(p["losses"]),
+                reverse=True,
+            )
 
             # Sort by most wins
             # player_arr.sort(key=lambda p: p["losses"])
@@ -223,7 +304,12 @@ async def post_standings():
 
             output_str = "{}\n```".format(div.split("-")[1])
             for i in range(len(player_arr)):
-                output_str += "\t{}. {}: {}-{}\n".format(i+1, ", ".join(player_arr[i]["name"]), player_arr[i]["wins"], player_arr[i]["losses"])
+                output_str += "\t{}. {}: {}-{}\n".format(
+                    i + 1,
+                    ", ".join(player_arr[i]["name"]),
+                    player_arr[i]["wins"],
+                    player_arr[i]["losses"],
+                )
             output_str += "```"
             standings_strings.append(output_str)
         if len(standings_strings):
@@ -233,6 +319,7 @@ async def post_standings():
     except Exception as err:
         log_exception("ERROR IN post_standings: {}".format(err.args))
         traceback.print_exc()
+
 
 async def boot_report(channel: discord.TextChannel):
     try:
@@ -245,17 +332,23 @@ async def boot_report(channel: discord.TextChannel):
                 boot_string += "```"
                 await channel.send(content=boot_string)
                 boot_string = "```"
-            
+
             if len(players):
                 boot_string += "{}:\n".format(" - ".join(div.split("-")))
                 for id, player in players.items():
-                    boot_string += "\t{} boot{} - {} (ID: {})\n".format(player['boots'], "s" if int(player['boots']) > 1 else " ", player['name'], id)
+                    boot_string += "\t{} boot{} - {} (ID: {})\n".format(
+                        player["boots"],
+                        "s" if int(player["boots"]) > 1 else " ",
+                        player["name"],
+                        id,
+                    )
         boot_string += "```"
-        
+
         if boot_string:
-                await channel.send(content=boot_string)
+            await channel.send(content=boot_string)
     except Exception as err:
         log_exception("ERROR IN boot_report: {}".format(err.args))
+
 
 async def mtl_players(channel: discord.TextChannel):
     try:
@@ -265,29 +358,44 @@ async def mtl_players(channel: discord.TextChannel):
         for player in players["players"]:
             if "clan_id" not in player or player["clan_id"] not in [7, 489]:
                 continue
-            output += "{:>2}. {:>4} - {} {}\n".format(player["rank"], player["displayed_rating"], ("<:101st:925466598784004126>" if player["clan_id"] == 7 else "<:python:925466546602643527>"), player["player_name"])
+            output += "{:>2}. {:>4} - {} {}\n".format(
+                player["rank"],
+                player["displayed_rating"],
+                (
+                    "<:101st:925466598784004126>"
+                    if player["clan_id"] == 7
+                    else "<:python:925466546602643527>"
+                ),
+                player["player_name"],
+            )
 
         await channel.send(content=output)
     except Exception as err:
         log_exception("ERROR IN mtl_players: {}".format(err.args))
 
+
 async def add_tournament(message: discord.Message):
     try:
         tournament_ids = loadFileToJson("./files/tournamentIds")
-        
+
         tournament_id = message.content.split(" ")[1]
         tournament_name = " ".join(message.content.split(" ")[2:])
         tournament_ids[tournament_name] = tournament_id
-        
-        await message.channel.send(content="Successfully added the following tournament: ({}, {})".format(tournament_name, tournament_id))
+
+        await message.channel.send(
+            content="Successfully added the following tournament: ({}, {})".format(
+                tournament_name, tournament_id
+            )
+        )
         dumpJsonToFile("./files/tournamentIds", tournament_ids)
     except Exception as err:
         log_exception("ERROR IN add_tournament: {}".format(err.args))
 
+
 async def add_game(message: discord.Message):
     try:
         game_ids = loadFileToJson("./files/gameIds")
-        
+
         game_id = int(message.content.split(" ")[1])
         game_name = " ".join(message.content.split(" ")[2:])
 
@@ -295,17 +403,22 @@ async def add_game(message: discord.Message):
             game_ids[game_name].append(game_id)
         else:
             game_ids[game_name] = [game_id]
-        
-        await message.channel.send(content="Successfully added the following game: ({}, {})".format(game_name, game_id))
+
+        await message.channel.send(
+            content="Successfully added the following game: ({}, {})".format(
+                game_name, game_id
+            )
+        )
         dumpJsonToFile("./files/gameIds", game_ids)
     except Exception as err:
         log_exception("ERROR IN add_game: {}".format(err.args))
+
 
 async def list_all(channel: discord.TextChannel):
     try:
         tournament_ids = loadFileToJson("./files/tournamentIds")
         game_ids = loadFileToJson("./files/gameIds")
-        
+
         # Tournaments
         output_str = "**Stored tournamets:**\n```"
         for [name, id] in tournament_ids.items():
@@ -314,7 +427,7 @@ async def list_all(channel: discord.TextChannel):
                 await channel.send(content="{}```".format(output_str))
                 output_str = "```"
         output_str += "```\n"
-        
+
         # Games
         output_str += "**Stored games:**\n```"
         for [name, id] in game_ids.items():
@@ -323,14 +436,16 @@ async def list_all(channel: discord.TextChannel):
                 await channel.send(content="{}```".format(output_str))
                 output_str = "```"
         output_str += "```"
-        
+
         await channel.send(content=output_str)
     except Exception as err:
         log_exception("ERROR IN list_tournaments: {}".format(err.args))
 
+
 #########################
 ######### Tasks #########
 #########################
+
 
 async def run_check_games_job():
     start_time = datetime.utcnow()
@@ -339,6 +454,7 @@ async def run_check_games_job():
     run_time = datetime.utcnow() - start_time
     log_message("Ran for {}".format(str(run_time)))
 
+
 async def run_post_standings_job():
     start_time = datetime.utcnow()
     log_message("Started run at {}".format(start_time.isoformat()), "post_standings")
@@ -346,12 +462,14 @@ async def run_post_standings_job():
     run_time = datetime.utcnow() - start_time
     log_message("Ran for {}".format(str(run_time)), "post_standings")
 
+
 async def run_boot_report(channel: discord.TextChannel):
     start_time = datetime.utcnow()
     log_message("Started run at {}".format(start_time.isoformat()), "boot_report")
     await boot_report(channel)
     run_time = datetime.utcnow() - start_time
     log_message("Ran for {}".format(str(run_time)), "boot_report")
+
 
 #########################
 ######### Events ########
@@ -382,7 +500,20 @@ CL Sheet <https://docs.google.com/spreadsheets/d/1DAeG0gE0QXSE_JYEH6prEH7mCe-ey6
 
 EAGLE_EMOJI = "<:101st:925466598784004126>"
 PYTHON_EMOJI = "<:python:925466546602643527>"
-OTHER_EMOJIS = ["🎉", "🥳", "😎", "💪", "🏅", "🔥", "❤️", "🙌", "🤌", "👌", "<:doggo:387080112815865865>"]
+OTHER_EMOJIS = [
+    "🎉",
+    "🥳",
+    "😎",
+    "💪",
+    "🏅",
+    "🔥",
+    "❤️",
+    "🙌",
+    "🤌",
+    "👌",
+    "<:doggo:387080112815865865>",
+]
+
 
 @client.event
 async def on_message(message: discord.Message):
@@ -399,126 +530,251 @@ async def on_message(message: discord.Message):
                 try:
                     await message.add_reaction(EAGLE_EMOJI)
                 except Exception as err:
-                    log_exception("ERROR IN on_message - 101st react: {}".format(err.args))
+                    log_exception(
+                        "ERROR IN on_message - 101st react: {}".format(err.args)
+                    )
                     traceback.print_exc()
             if message.content.startswith("**Python**"):
                 try:
                     await message.add_reaction(PYTHON_EMOJI)
                 except Exception as err:
-                    log_exception("ERROR IN on_message - Python react: {}".format(err.args))
+                    log_exception(
+                        "ERROR IN on_message - Python react: {}".format(err.args)
+                    )
                     traceback.print_exc()
             # Only post extra emojis if one of the two won AND the other clan wasn't defeated
-            if (message.content.startswith("**{101st}**") or message.content.startswith("**Python**")) and (("**{101st}**" in message.content) ^ ("**Python**" in message.content)):
+            if (
+                message.content.startswith("**{101st}**")
+                or message.content.startswith("**Python**")
+            ) and (
+                ("**{101st}**" in message.content) ^ ("**Python**" in message.content)
+            ):
                 try:
                     await message.add_reaction(random.choice(OTHER_EMOJIS))
                     await message.add_reaction(random.choice(OTHER_EMOJIS))
                 except Exception as err:
-                    log_exception("ERROR IN on_message - Adding other reacts: {}".format(err.args))
+                    log_exception(
+                        "ERROR IN on_message - Adding other reacts: {}".format(err.args)
+                    )
                     traceback.print_exc()
 
         if message.content.lower() == "b!boot_report":
-            log_message("{}#{} called boot_report".format(message.author.name, message.author.discriminator), "on_message")
+            log_message(
+                "{}#{} called boot_report".format(
+                    message.author.name, message.author.discriminator
+                ),
+                "on_message",
+            )
             await run_boot_report(message.channel)
         elif message.content.lower() == "b!help":
             # show help message
-            log_message("{}#{} called help".format(message.author.name, message.author.discriminator), "on_message")
+            log_message(
+                "{}#{} called help".format(
+                    message.author.name, message.author.discriminator
+                ),
+                "on_message",
+            )
             await message.reply(content=HELP_MESSAGE, mention_author=False)
         elif message.content.lower() == "b!mtl":
             # show python & eagle members in top 50
-            log_message("{}#{} called mtl".format(message.author.name, message.author.discriminator), "on_message")
+            log_message(
+                "{}#{} called mtl".format(
+                    message.author.name, message.author.discriminator
+                ),
+                "on_message",
+            )
             await mtl_players(message.channel)
         elif message.content.lower() == "b!links":
             # show relevant clan links
-            log_message("{}#{} called links".format(message.author.name, message.author.discriminator), "on_message")
+            log_message(
+                "{}#{} called links".format(
+                    message.author.name, message.author.discriminator
+                ),
+                "on_message",
+            )
             await message.channel.send(content=LINKS_MESSAGE)
         elif message.content.lower().startswith("b!rgroups"):
             # random groups command
-            tokens = message.content.split(' ')
+            tokens = message.content.split(" ")
             multiplicity = int(tokens[1])
             shuffled_groups = tokens[2:]
             random.shuffle(shuffled_groups)
 
             # get size values
-            group_size, remainder, index = len(shuffled_groups) // multiplicity, len(shuffled_groups) % multiplicity, 0
+            group_size, remainder, index = (
+                len(shuffled_groups) // multiplicity,
+                len(shuffled_groups) % multiplicity,
+                0,
+            )
 
             # create output string
-            output_str = '**__Groups:__**\n'
-            for group in range(1, multiplicity+1):
+            output_str = "**__Groups:__**\n"
+            for group in range(1, multiplicity + 1):
                 size = group_size + (1 if remainder > 0 else 0)
                 remainder -= 1
-                output_str += 'Group {}:\t{}\n'.format(group, ', '.join(shuffled_groups[index:index+size]))
+                output_str += "Group {}:\t{}\n".format(
+                    group, ", ".join(shuffled_groups[index : index + size])
+                )
                 index += size
 
-            log_message("{}#{} called random. Mulitplicity: {}. Payload: '{}'".format(message.author.name, message.author.discriminator, multiplicity,shuffled_groups), "on_message")
+            log_message(
+                "{}#{} called random. Mulitplicity: {}. Payload: '{}'".format(
+                    message.author.name,
+                    message.author.discriminator,
+                    multiplicity,
+                    shuffled_groups,
+                ),
+                "on_message",
+            )
             await message.channel.send(content=output_str)
         elif message.content.lower().startswith("b!rgroup"):
             # Arrange item to random group
-            tokens = message.content.split(' ')
+            tokens = message.content.split(" ")
             groups = tokens[1:-1]
             item_to_sort = tokens[-1]
             rand_group = random.choice(groups)
 
             # create output string
-            output_str = '{}: {}'.format(item_to_sort, rand_group)
-            log_message("{}#{} called random. Groups: {}. ItemToSort: {}. Payload: '{}'".format(message.author.name, message.author.discriminator, groups, item_to_sort, rand_group), "on_message")
+            output_str = "{}: {}".format(item_to_sort, rand_group)
+            log_message(
+                "{}#{} called random. Groups: {}. ItemToSort: {}. Payload: '{}'".format(
+                    message.author.name,
+                    message.author.discriminator,
+                    groups,
+                    item_to_sort,
+                    rand_group,
+                ),
+                "on_message",
+            )
             await message.channel.send(content=output_str)
         elif message.content.lower().startswith("b!rorder"):
             # create a randomized order
-            tokens = message.content.split(' ')
+            tokens = message.content.split(" ")
             shuffled_groups = tokens[1:]
             random.shuffle(shuffled_groups)
 
             # create output string
-            output_str = '**__Randomized Order:__**\n'
+            output_str = "**__Randomized Order:__**\n"
             for i in range(len(shuffled_groups)):
-                output_str += '{}. {}\n'.format(i+1, shuffled_groups[i])
+                output_str += "{}. {}\n".format(i + 1, shuffled_groups[i])
 
-            log_message("{}#{} called rorder. Original: {}. Payload: '{}'".format(message.author.name, message.author.discriminator, tokens[1:], shuffled_groups), "on_message")
+            log_message(
+                "{}#{} called rorder. Original: {}. Payload: '{}'".format(
+                    message.author.name,
+                    message.author.discriminator,
+                    tokens[1:],
+                    shuffled_groups,
+                ),
+                "on_message",
+            )
             await message.channel.send(content=output_str)
         elif "b!standings" in message.content.lower():
-            log_message("{}#{} called standings".format(message.author.name, message.author.discriminator), "on_message")
+            log_message(
+                "{}#{} called standings".format(
+                    message.author.name, message.author.discriminator
+                ),
+                "on_message",
+            )
             await run_post_standings_job()
         # Below are admin commands
         elif "b!msg" in message.content.lower() and message.author.id == MY_DISCORD_ID:
-            log_message("{}#{} called msg".format(message.author.name, message.author.discriminator), "on_message")
+            log_message(
+                "{}#{} called msg".format(
+                    message.author.name, message.author.discriminator
+                ),
+                "on_message",
+            )
 
-            channel = discord.utils.find(lambda channel: channel.id == int(message.content.split(" ")[1]), client.get_all_channels()) 
+            channel = discord.utils.find(
+                lambda channel: channel.id == int(message.content.split(" ")[1]),
+                client.get_all_channels(),
+            )
             await channel.send(content=" ".join(message.content.split(" ")[2:]))
         elif "b!kys" in message.content.lower() and message.author.id == MY_DISCORD_ID:
             await message.channel.send(content="Ok, I leave now :(")
             await client.close()
         elif "b!cg" in message.content.lower() and message.author.id == MY_DISCORD_ID:
-            log_message("{}#{} called cg".format(message.author.name, message.author.discriminator), "on_message")
+            log_message(
+                "{}#{} called cg".format(
+                    message.author.name, message.author.discriminator
+                ),
+                "on_message",
+            )
             await run_check_games_job()
         elif "b!addt" in message.content.lower() and message.author.id == MY_DISCORD_ID:
-            log_message("{}#{} called addt".format(message.author.name, message.author.discriminator), "on_message")
+            log_message(
+                "{}#{} called addt".format(
+                    message.author.name, message.author.discriminator
+                ),
+                "on_message",
+            )
             await add_tournament(message)
         elif "b!addg" in message.content.lower() and message.author.id == MY_DISCORD_ID:
-            log_message("{}#{} called addg".format(message.author.name, message.author.discriminator), "on_message")
+            log_message(
+                "{}#{} called addg".format(
+                    message.author.name, message.author.discriminator
+                ),
+                "on_message",
+            )
             await add_game(message)
         elif "b!ls" in message.content.lower() and message.author.id == MY_DISCORD_ID:
-            log_message("{}#{} called ls".format(message.author.name, message.author.discriminator), "on_message")
+            log_message(
+                "{}#{} called ls".format(
+                    message.author.name, message.author.discriminator
+                ),
+                "on_message",
+            )
             await list_all(message.channel)
         elif "b!temp" in message.content.lower() and message.author.id == MY_DISCORD_ID:
-            log_message("{}#{} called temp".format(message.author.name, message.author.discriminator), "on_message")
-            await message.channel.send(content="{}".format(subprocess.run(['vcgencmd measure_temp'], shell=True, stdout=subprocess.PIPE).stdout.decode('utf-8')))
+            log_message(
+                "{}#{} called temp".format(
+                    message.author.name, message.author.discriminator
+                ),
+                "on_message",
+            )
+            await message.channel.send(
+                content="{}".format(
+                    subprocess.run(
+                        ["vcgencmd measure_temp"], shell=True, stdout=subprocess.PIPE
+                    ).stdout.decode("utf-8")
+                )
+            )
         elif "b!ipi" in message.content.lower() and message.author.id == MY_DISCORD_ID:
-            log_message("{}#{} called ipi".format(message.author.name, message.author.discriminator), "on_message")
+            log_message(
+                "{}#{} called ipi".format(
+                    message.author.name, message.author.discriminator
+                ),
+                "on_message",
+            )
 
             gw = os.popen("ip -4 route show default").read().split()
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect((gw[2], 0))
             ipaddr = s.getsockname()[0]
             host = socket.gethostname()
-            await message.channel.send(content="RPI is connected to {} (IP: {})".format(host, ipaddr))
+            await message.channel.send(
+                content="RPI is connected to {} (IP: {})".format(host, ipaddr)
+            )
         elif "b!ipe" in message.content.lower() and message.author.id == MY_DISCORD_ID:
-            log_message("{}#{} called ipe".format(message.author.name, message.author.discriminator), "on_message")
-            ip = requests.get('https://checkip.amazonaws.com').text.strip()
+            log_message(
+                "{}#{} called ipe".format(
+                    message.author.name, message.author.discriminator
+                ),
+                "on_message",
+            )
+            ip = requests.get("https://checkip.amazonaws.com").text.strip()
 
             await message.channel.send(content="RPI's IP address is {}".format(ip))
         elif message.content.lower().startswith("b!"):
-            log_message("{}#{} used invalid command: `{}`".format(message.author.name, message.author.discriminator, message.content), "on_message")
-            await message.channel.send(content="You used an invalid command or do not have the correct permissions. Use `b!help` to see a list of commands.")
+            log_message(
+                "{}#{} used invalid command: `{}`".format(
+                    message.author.name, message.author.discriminator, message.content
+                ),
+                "on_message",
+            )
+            await message.channel.send(
+                content="You used an invalid command or do not have the correct permissions. Use `b!help` to see a list of commands."
+            )
 
     except Exception as err:
         log_exception("ERROR IN post_standings: {}".format(err.args))
@@ -530,27 +786,34 @@ async def on_message(message: discord.Message):
 async def on_ready():
     log_message("Bot is connected", "on_ready")
     global are_events_scheduled
-    
+
     # Start schedulers (only on first run)
     if not are_events_scheduled:
         scheduler = AsyncIOScheduler()
-        scheduler.add_job(run_check_games_job, CronTrigger(hour="*", minute="0", second="0"))
-        scheduler.add_job(run_post_standings_job, CronTrigger(day="*/3", hour="16", minute="5", second="0"))
+        scheduler.add_job(
+            run_check_games_job, CronTrigger(hour="*", minute="0", second="0")
+        )
+        scheduler.add_job(
+            run_post_standings_job,
+            CronTrigger(day="*/3", hour="16", minute="5", second="0"),
+        )
         scheduler.start()
         log_message("Bot started scheduled tasks", "on_ready")
         are_events_scheduled = True
 
 
 INTERNAL_EVENTS = """
-- [Our Discord Server](https://www.warzone.com/Forum/545882-discord-clan-server) (Please feel free to link a game of yours (in the game review channel) for analysing by some of our senior clan members to learn & improve)
+- [Our Discord Server](https://www.warzone.com/Discussion/?ID=705523) (Please feel free to link a game of yours (in the game review channel) for analysing by some of our senior clan members to learn & improve)
+- [101st Internal Tournament Series](https://www.warzone.com/Discussion/?ID=743911)
 """
 
 COMMUNITY_EVENTS = """
 - [Clan Wars](https://www.warzone.com/Clans/War)
 - [AWP Tour](https://www.warzone.com/Forum/262655-awp-world-tour-magazine)
-- [Multi-Day Ladder](http://md-ladder.cloudapp.net/allplayers)
+- [Multi-Day Ladder](https://www.warlight-mtl.com/)
 - [WarZone Ladders](https://www.warzone.com/Ladders)
 """
+
 
 @client.event
 async def on_member_update(before: discord.Member, after: discord.Member):
@@ -560,23 +823,45 @@ async def on_member_update(before: discord.Member, after: discord.Member):
 
         # Check if member got the eagle role
         if eagle_role in new_roles:
-            log_message("Sending welcome message to: {}#{}".format(after.name, after.discriminator), "on_member_update")
-            embed_msg = discord.Embed(title="Welcome to 101st!", description="Events to get involved in:")
-            embed_msg.set_footer(text="Note: this bot does not read messages. Ping Gak in the server if you have questions.")
+            log_message(
+                "Sending welcome message to: {}#{}".format(
+                    after.name, after.discriminator
+                ),
+                "on_member_update",
+            )
+            embed_msg = discord.Embed(
+                title="Welcome to 101st!", description="Events to get involved in:"
+            )
+            embed_msg.set_footer(
+                text="Note: this bot does not read messages. Ping stefano36k in the server if you have questions."
+            )
             embed_msg.add_field(name="Internally in 101st", value=INTERNAL_EVENTS)
             embed_msg.add_field(name="Community Events", value=COMMUNITY_EVENTS)
             await after.send(embed=embed_msg)
-            
+
             # Message sent successfully, inform server
-            channel = discord.utils.find(lambda channel: channel.id == SPAM_CHANNEL_ID, client.get_all_channels()) 
-            await channel.send(content="Successfully sent the 101st welcome message to {}#{}".format(after.name, after.discriminator))
+            channel = discord.utils.find(
+                lambda channel: channel.id == SPAM_CHANNEL_ID, client.get_all_channels()
+            )
+            await channel.send(
+                content="Successfully sent the 101st welcome message to {}#{}".format(
+                    after.name, after.discriminator
+                )
+            )
     except Exception as err:
         log_exception("ERROR IN on_member_update: {}".format(err.args))
         traceback.print_exc()
 
         # Message sent unsuccessfully, inform server
-        channel = discord.utils.find(lambda channel: channel.id == SPAM_CHANNEL_ID, client.get_all_channels()) 
-        await channel.send(content="Encountered error while sending 101st welcome message to {}#{}\n\nError: {}".format(after.name, after.discriminator, err.args))
+        channel = discord.utils.find(
+            lambda channel: channel.id == SPAM_CHANNEL_ID, client.get_all_channels()
+        )
+        await channel.send(
+            content="Encountered error while sending 101st welcome message to {}#{}\n\nError: {}".format(
+                after.name, after.discriminator, err.args
+            )
+        )
+
 
 client.run(TOKEN)
 
