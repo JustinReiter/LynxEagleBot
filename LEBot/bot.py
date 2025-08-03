@@ -518,11 +518,12 @@ OTHER_EMOJIS = [
 @client.event
 async def on_message(message: discord.Message):
     try:
+        print(message.author.id)
+        print(MY_DISCORD_ID)
         # IGNORE MESSAGES FROM THE BOT... BAD RECURSION
         # IGNORE MESSAGES IN DMs... no hidden spamming
-        if message.author.id == client.user.id or not message.guild:
-            return
-
+        #if message.author.id == client.user.id or not message.guild.id:
+            #return
         # Check if message is from Clot Bot & posting python/101st win
         if message.author.id == WARZONE_BOT_ID and message.channel.id == CL_LOG_CHANNEL:
             # New post in proper channel... Check if 101st or python won
@@ -726,19 +727,8 @@ async def on_message(message: discord.Message):
             )
             await list_all(message.channel)
         elif "b!temp" in message.content.lower() and message.author.id == MY_DISCORD_ID:
-            log_message(
-                "{}#{} called temp".format(
-                    message.author.name, message.author.discriminator
-                ),
-                "on_message",
-            )
-            await message.channel.send(
-                content="{}".format(
-                    subprocess.run(
-                        ["vcgencmd measure_temp"], shell=True, stdout=subprocess.PIPE
-                    ).stdout.decode("utf-8")
-                )
-            )
+            log_message("{}#{} called temp".format(message.author.name, message.author.discriminator), "on_message")
+            await message.channel.send("{}".format(subprocess.run(['vcgencmd measure_temp'], shell=True, stdout=subprocess.PIPE).stdout.decode('utf-8')))
         elif "b!ipi" in message.content.lower() and message.author.id == MY_DISCORD_ID:
             log_message(
                 "{}#{} called ipi".format(
